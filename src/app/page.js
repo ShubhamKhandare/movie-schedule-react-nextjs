@@ -14,6 +14,7 @@ import { TableHead, TableRow, TableHeader, TableCell, TableBody, Table } from "@
 
 export default function Component() {
   const [genres, setGenres] = useState([]);
+  const [filterGenres, setFilterGenres] = useState([]);
   const [checkedGenreId, setCheckedGenreId] = useState(null);
   const [movies, setMovies] = useState([]);
   const [movieSearchTerm, setMovieSearchTerm] = useState(null);
@@ -21,18 +22,19 @@ export default function Component() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const baseURL = 'https://movie-schedule.onrender.com'
   // const baseURL = 'http://localhost:8000'
+
   useEffect(() => {
     fetchGenres();
-    fetchMovies();
   }, []);
 
   function fetchGenres(){
     fetch(`${baseURL}/api/v1/core/genre/`).then(response => response.json()).then(data => {
       setGenres(data.results);
+      fetchMovies(data.results);
     });
   }
 
-  function fetchMovies() {
+  function fetchMovies(genreList) {
     let movie_url = `${baseURL}/api/v1/core/movie/`
     if (checkedGenreId) {
       movie_url += `?genres=${checkedGenreId}`
@@ -48,19 +50,21 @@ export default function Component() {
     fetch(movie_url).then(response => response.json()).then(data => {
         console.log('fetching movies', data.results)
         setMovies(data.results);
-        // let genreIdSet = new Set();
-        // let newGenreList = []
-        // data.results.forEach((movie) => {
-        //   movie.genres.forEach((genre) => {
-        //     genreIdSet.add(genre.id);
-        //   });
-        // });
-        // genres.forEach((genre) => {
-        //   if(genre.id in genreIdSet) {
-        //     newGenreList.add(genre)
-        //   }
-        // })
-        // setGenres(newGenreList)
+        let genreIdSet = new Set();
+        let newGenreList = []
+        data.results.forEach((movie) => {
+          movie.genres.forEach((genre) => {
+            genreIdSet.add(genre.id);
+          });
+        });
+        console.log(genreIdSet, genres)
+        genreList.forEach((genre) => {
+          if(genreIdSet.has(genre.id)) {
+            newGenreList.push(genre)
+          }
+        })
+        console.log(newGenreList)
+        setFilterGenres(newGenreList)
     });
     
   }
@@ -92,7 +96,7 @@ export default function Component() {
   };
 
   useEffect(() => {
-    fetchMovies()
+    fetchMovies(genres)
   }, [checkedGenreId, movieSearchTerm, upvotes]);
 
 
@@ -119,7 +123,7 @@ export default function Component() {
                   <Button variant="outline">Filter</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  {genres.map((genre) => (
+                  {filterGenres.map((genre) => (
                     <DropdownMenuCheckboxItem key={genre.id} checked={checkedGenreId === genre.id} onClick={() => handleCheckedGenreId(genre.id)}>{genre.name}</DropdownMenuCheckboxItem>
                   ))}
                 </DropdownMenuContent>
@@ -170,7 +174,8 @@ export default function Component() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{movie.genres.map((movieGenre)=> (<span className="text-sm font-medium">{movieGenre.name} </span>))}</TableCell>
+                    {/* <TableCell>{movie.genres.map((movieGenre)=> (<span className="text-sm font-medium">{movieGenre.name},</span>))}</TableCell> */}
+                    <TableCell><span className="text-sm font-medium">{movie.genres.map(x => x.name).join(", ")}</span></TableCell>
                     <TableCell>{movie.year_release}</TableCell>
                     <TableCell>{movie.runtime}</TableCell>
                     <TableCell>
